@@ -12,8 +12,6 @@
 
   <!-- ═══════════════════════════════════════════════════════════════
        CHANGE 1 OF 6 — Firebase SDK scripts
-       These two lines load the Firebase library from Google's CDN.
-       They must come BEFORE the firebase.initializeApp() call below.
   ════════════════════════════════════════════════════════════════ -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -30,16 +28,6 @@
 
   <!-- ═══════════════════════════════════════════════════════════════
        CHANGE 2 OF 6 — Firebase initialisation
-       This plain <script> block (NOT type="text/babel") runs before
-       React loads. It creates the global `db` object that React will
-       use to read and write data.
-
-       HOW TO FILL THIS IN:
-         1. Go to https://console.firebase.google.com
-         2. Create a project (or open your existing one)
-         3. Click the </> Web icon to register a web app
-         4. Copy the firebaseConfig values into the object below
-         5. Replace every "REPLACE_WITH_..." placeholder
   ════════════════════════════════════════════════════════════════ -->
 <script>
   const FIREBASE_CONFIG = {
@@ -63,10 +51,6 @@
 
     // ═══════════════════════════════════════════════════════════════
     // CHANGE 3 OF 6 — Admin password
-    // Change the string below to whatever secret you want.
-    // Only you will see this (it's inside the source file on your
-    // private GitHub repo, not exposed to viewers unless they open
-    // DevTools and inspect the source — acceptable for a leaderboard).
     // ═══════════════════════════════════════════════════════════════
     const ADMIN_PASSWORD = "wonka43admin";
 
@@ -189,8 +173,6 @@
 
       // ═══════════════════════════════════════════════════════════════
       // CHANGE 4 OF 6 — Admin mode state
-      // isAdmin starts false for everyone. The lock button in the
-      // header calls handleAdminToggle() to authenticate.
       // ═══════════════════════════════════════════════════════════════
       const [isAdmin, setIsAdmin] = useState(false);
 
@@ -216,15 +198,6 @@
 
       // ═══════════════════════════════════════════════════════════════
       // CHANGE 5 OF 6 — Load data from Firestore instead of localStorage
-      //
-      // onSnapshot sets up a real-time listener. Every time the
-      // Firestore document is updated (by you, the admin), ALL open
-      // browser tabs receive the new data automatically — no page
-      // refresh needed.
-      //
-      // The function returned by onSnapshot is the unsubscribe handle.
-      // Returning it from useEffect means React calls it on unmount,
-      // which is correct cleanup behaviour.
       // ═══════════════════════════════════════════════════════════════
       useEffect(() => {
         const unsubscribe = FS_DOC.onSnapshot(
@@ -256,10 +229,6 @@
 
       // ═══════════════════════════════════════════════════════════════
       // CHANGE 6 OF 6 — Save to Firestore instead of localStorage
-      //
-      // FS_DOC.set(data) overwrites the entire document with the new
-      // state. Because onSnapshot is listening, every viewer tab will
-      // receive the update within ~1 second automatically.
       // ═══════════════════════════════════════════════════════════════
       const save = useCallback((data) => {
         FS_DOC.set(data)
