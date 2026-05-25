@@ -124,15 +124,15 @@
 
     const ACHIEVEMENTS = [
       { id: "first_blood",  icon: "🩸", name: "First Blood",       desc: "Complete your first ticket",                       xp: 20,  rarity: "common"    },
-      { id: "bug_slayer",   icon: "🐛", name: "Bug Slayer",        desc: "Fix 5 bugs in one sprint",                         xp: 60,  rarity: "uncommon"  },
+      { id: "bug_slayer",   icon: "🐛", name: "Bug Slayer",        desc: "Fix 1 bug in one sprint",                          xp: 60,  rarity: "uncommon"  },
       { id: "speed_demon",  icon: "⚡", name: "Speed Demon",       desc: "Close 3 tickets before Wednesday in a sprint",     xp: 50,  rarity: "uncommon"  },
       { id: "unbreakable",  icon: "🪨", name: "Unbreakable",       desc: "Zero blockers for an entire sprint",               xp: 80,  rarity: "rare"      },
-      { id: "team_player",  icon: "🤝", name: "Team Player",       desc: "Help unblock a teammate 3 times",                  xp: 70,  rarity: "uncommon"  },
+      { id: "team_player",  icon: "🤝", name: "Team Player",       desc: "Help unblock a teammate",                          xp: 70,  rarity: "uncommon"  },
       { id: "on_the_rails", icon: "🚂", name: "On the Rails",      desc: "Attend all standups for two consecutive weeks",    xp: 40,  rarity: "common"    },
-      { id: "renaissance",  icon: "🎨", name: "Renaissance Dev",   desc: "Close tickets across 3 different disciplines",     xp: 100, rarity: "rare"      },
+      { id: "renaissance",  icon: "🎨", name: "Hardcore Dev",      desc: "Reach level 10",                                   xp: 100, rarity: "rare"      },
       { id: "last_car",     icon: "🏆", name: "Last Car Standing", desc: "Highest XP earner in a sprint",                    xp: 120, rarity: "epic"      },
       { id: "perfectionist",icon: "💎", name: "No Rework",         desc: "10 tickets closed with no revision requested",     xp: 150, rarity: "epic"      },
-      { id: "the_fixer",    icon: "🔧", name: "The Fixer",         desc: "Resolve a build-breaking issue within 1 hour",     xp: 100, rarity: "rare"      },
+      { id: "the_fixer",    icon: "🔧", name: "The Fixer",         desc: "Resolve a build-breaking issue",                   xp: 100, rarity: "rare"      },
       { id: "myth_maker",   icon: "📖", name: "Myth Maker",        desc: "Complete a full Main Quest chain solo",            xp: 200, rarity: "legendary" },
       { id: "veteran",      icon: "⭐", name: "Veteran",           desc: "Reach Level 5",                                    xp: 0,   rarity: "rare"      },
     ];
@@ -352,7 +352,7 @@
           <div style={{ background: "linear-gradient(180deg,#1A0F00 0%,#0D0D0D 100%)", padding: "28px 28px 20px", borderBottom: "1px solid #3A2A10" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div>
-                <div style={{ fontFamily: "'Cinzel',serif", fontSize: "22px", fontWeight: 700, color: "#D4A843", letterSpacing: "0.08em" }}>WONKA 43 — CREW CHRONICLES</div>
+                <div style={{ fontFamily: "'Cinzel',serif", fontSize: "22px", fontWeight: 700, color: "#D4A843", letterSpacing: "0.08em" }}>FROST HAUL — CREW CHRONICLES</div>
                 <div style={{ fontFamily: "'Crimson Text',serif", fontSize: "14px", color: "#8B7355", marginTop: "2px" }}>Production RPG · Sprint Tracking · Crew Advancement</div>
               </div>
 
@@ -486,7 +486,7 @@
                     <div style={{ fontFamily: "'Cinzel',serif", fontSize: "13px", color: "#8B7355", letterSpacing: "0.1em", marginBottom: "8px" }}>✦ CHOOSE YOUR CLASS ✦</div>
                     {/* Class assignment prompt only shown in admin mode */}
                     {isAdmin && classTarget && <div style={{ fontFamily: "'Crimson Text',serif", fontSize: "14px", color: "#D4A843", marginBottom: "16px" }}>Assigning class for: <strong>{classTarget}</strong> — select below then confirm.</div>}
-                    {!classTarget && <div style={{ fontFamily: "'Crimson Text',serif", fontSize: "14px", color: "#8B7355", marginBottom: "16px" }}>Browse all classes. {isAdmin ? <>To assign, go to the Leaderboard and click "Pick class" on a crew member.</> : <>Classes are assigned by the Game Producer.</>}</div>}
+                    {!classTarget && <div style={{ fontFamily: "'Crimson Text',serif", fontSize: "14px", color: "#8B7355", marginBottom: "16px" }}>Browse all classes. {isAdmin ? <>To assign, go to the Leaderboard and click "Pick class" on a crew member.</> : <>Classes are assigned by the Game Producer. [XP Multiplier Feature not available]</>}</div>}
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(220px,1fr))", gap: "10px" }}>
                       {CLASSES.map(cls => (
                         <div key={cls.id}
@@ -532,7 +532,7 @@
                           ))}
                         </div>
                         <div style={{ marginTop: "16px" }}>
-                          <div style={{ fontFamily: "'Cinzel',serif", fontSize: "11px", color: "#6B4F12", letterSpacing: "0.08em", marginBottom: "10px" }}>XP MULTIPLIERS & BONUSES</div>
+                          <div style={{ fontFamily: "'Cinzel',serif", fontSize: "11px", color: "#6B4F12", letterSpacing: "0.08em", marginBottom: "10px" }}>XP MULTIPLIERS & BONUSES - [Feature not available]</div>
                           <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
                             {MULTIPLIERS.map((m, i) => (
                               <div key={i} className="card" style={{ padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
