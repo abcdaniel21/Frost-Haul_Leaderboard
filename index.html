@@ -41,22 +41,22 @@
          4. Copy the firebaseConfig values into the object below
          5. Replace every "REPLACE_WITH_..." placeholder
   ════════════════════════════════════════════════════════════════ -->
-  <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyB0EuGSoyNbomz4ojLh89yXzbw4AJJkAOY",
-  authDomain: "frost-haul.firebaseapp.com",
-  projectId: "frost-haul",
-  storageBucket: "frost-haul.firebasestorage.app",
-  messagingSenderId: "58210065772",
-  appId: "1:58210065772:web:0cf565cbf15e995814e749"
-};
+<script>
+  const FIREBASE_CONFIG = {
+    apiKey:            "AIzaSyB0EuGSoyNbomz4ojLh89yXzbw4AJJkAOY",
+    authDomain:        "frost-haul.firebaseapp.com",
+    projectId:         "frost-haul",
+    storageBucket:     "frost-haul.firebasestorage.app",
+    messagingSenderId: "58210065772",
+    appId:             "1:58210065772:web:0cf565cbf15e995814e749"
+  };
 
-    firebase.initializeApp(FIREBASE_CONFIG);
+  firebase.initializeApp(FIREBASE_CONFIG);
 
     // `db` is a global variable. The React component below uses it
     // to talk to Firestore. Do not rename it.
-    const db = firebase.firestore();
-  </script>
+  const db = firebase.firestore();
+</script>
 
   <script type="text/babel">
     const { useState, useEffect, useCallback } = React;
