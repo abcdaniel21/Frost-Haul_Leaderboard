@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wonka43 — Crew Chronicles</title>
+
+  <!-- React (unchanged) -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       CHANGE 1 OF 6 — Firebase SDK scripts
+       These two lines load the Firebase library from Google's CDN.
+       They must come BEFORE the firebase.initializeApp() call below.
+  ════════════════════════════════════════════════════════════════ -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0D0D0D; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       CHANGE 2 OF 6 — Firebase initialisation
+       This plain <script> block (NOT type="text/babel") runs before
+       React loads. It creates the global `db` object that React will
+       use to read and write data.
+
+       HOW TO FILL THIS IN:
+         1. Go to https://console.firebase.google.com
+         2. Create a project (or open your existing one)
+         3. Click the </> Web icon to register a web app
+         4. Copy the firebaseConfig values into the object below
+         5. Replace every "REPLACE_WITH_..." placeholder
+  ════════════════════════════════════════════════════════════════ -->
+  <script>
+    const FIREBASE_CONFIG = {
+      apiKey:            "REPLACE_WITH_YOUR_API_KEY",
+      authDomain:        "REPLACE_WITH_YOUR_PROJECT_ID.firebaseapp.com",
+      projectId:         "REPLACE_WITH_YOUR_PROJECT_ID",
+      storageBucket:     "REPLACE_WITH_YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "REPLACE_WITH_YOUR_MESSAGING_SENDER_ID",
+      appId:             "REPLACE_WITH_YOUR_APP_ID",
+    };
+
+    firebase.initializeApp(FIREBASE_CONFIG);
+
+    // `db` is a global variable. The React component below uses it
+    // to talk to Firestore. Do not rename it.
+    const db = firebase.firestore();
+  </script>
+
+  <script type="text/babel">
+    const { useState, useEffect, useCallback } = React;
+
+    // ═══════════════════════════════════════════════════════════════
+    // CHANGE 3 OF 6 — Admin password
+    // Change the string below to whatever secret you want.
+    // Only you will see this (it's inside the source file on your
+    // private GitHub repo, not exposed to viewers unless they open
+    // DevTools and inspect the source — acceptable for a leaderboard).
+    // ═══════════════════════════════════════════════════════════════
+    const ADMIN_PASSWORD = "wonka43admin";
+
+    // Firestore path: collection "leaderboard", document "state"
+    // All member data lives in a single document at this path.
+    const FS_DOC = db.collection("leaderboard").doc("state");
+
+    // ── DATA ─────────────────────────────────────────────────────────
+
+    const CLASSES = [
+      { id: "warrior",       name: "Warrior",        icon: "⚔️",  color: "#C0392B", desc: "Charges headfirst into the hardest tasks. Nothing is too broken to fix.",                       bonus: "+15% XP on large tickets (L/XL)",              trait: "Resilient"   },
+      { id: "sorcerer",      name: "Sorcerer",        icon: "🔮",  color: "#8E44AD", desc: "Weaves elegant systems from arcane logic. The code bends to their will.",                       bonus: "+20% XP on code/systems tickets",               trait: "Arcane"      },
+      { id: "paladin",       name: "Paladin",         icon: "🛡️", color: "#2980B9", desc: "Guardian of quality. Finds what others miss. The build does not break on their watch.",         bonus: "+20% XP on bug fix and QA tickets",             trait: "Steadfast"   },
+      { id: "rogue",         name: "Rogue",           icon: "🗡️", color: "#27AE60", desc: "Hunts edge cases in the shadows. Exploits weaknesses before players find them.",               bonus: "+25% XP on critical bugs",                      trait: "Swift"       },
+      { id: "ranger",        name: "Ranger",          icon: "🏹",  color: "#E67E22", desc: "Scout of uncharted territory. Maps what others haven't seen yet.",                             bonus: "+20% XP on level design tickets",               trait: "Precise"     },
+      { id: "bard",          name: "Bard",            icon: "🎭",  color: "#E91E63", desc: "Weaves the narrative that gives the world meaning. Words are their weapon.",                   bonus: "+20% XP on design and narrative tickets",      trait: "Inspiring"   },
+      { id: "druid",         name: "Druid",           icon: "🌿",  color: "#16A085", desc: "Shapes living worlds from raw materials. The environment answers to them.",                    bonus: "+20% XP on environment art tickets",            trait: "Attuned"     },
+      { id: "alchemist",     name: "Alchemist",       icon: "⚗️",  color: "#D4AC0D", desc: "Transmutes raw geometry into visual gold. VFX and shaders are their craft.",                  bonus: "+25% XP on VFX and art tickets",               trait: "Inventive"   },
+      { id: "blacksmith",    name: "Blacksmith",      icon: "🔨",  color: "#7F8C8D", desc: "Forges the tools and systems that the whole team depends on.",                                 bonus: "+15% XP on all tickets + streak bonus",        trait: "Dependable"  },
+      { id: "necromancer",   name: "Necromancer",     icon: "💀",  color: "#5D6D7E", desc: "Resurrects dead code. Finds life where others gave up. Debugging is their domain.",           bonus: "+30% XP on regression and debug tickets",      trait: "Relentless"  },
+      { id: "siege_engineer",name: "Siege Engineer",  icon: "🏰",  color: "#A04000", desc: "Builds the load-bearing architecture. When their work holds, everything holds.",              bonus: "+15% XP on all technical tickets",             trait: "Methodical"  },
+      { id: "shaman",        name: "Shaman",          icon: "🔥",  color: "#CA6F1E", desc: "Bridges disciplines. Integration, pipeline, and the connective tissue of production.",        bonus: "+10% XP on all tickets + blocker resolution bonus", trait: "Adaptive" },
+    ];
+
+    const LEVELS = [
+      { level: 1,  title: "Apprentice",   xp: 0    },
+      { level: 2,  title: "Journeyman",   xp: 150  },
+      { level: 3,  title: "Adept",        xp: 400  },
+      { level: 4,  title: "Skilled",      xp: 750  },
+      { level: 5,  title: "Expert",       xp: 1200 },
+      { level: 6,  title: "Master",       xp: 1800 },
+      { level: 7,  title: "Grandmaster",  xp: 2600 },
+      { level: 8,  title: "Champion",     xp: 3500 },
+      { level: 9,  title: "Legend",       xp: 4600 },
+      { level: 10, title: "Mythic",       xp: 6000 },
+    ];
+
+    const XP_TABLE = [
+      { size: "XS", label: "Trivial", xp: 15,  desc: "Copy change, config tweak, rename"              },
+      { size: "S",  label: "Small",   xp: 30,  desc: "Simple feature, minor bug, small asset"         },
+      { size: "M",  label: "Medium",  xp: 60,  desc: "Feature with complexity, multi-step task"       },
+      { size: "L",  label: "Large",   xp: 120, desc: "Major system, complex art pass, architecture"   },
+      { size: "XL", label: "Epic",    xp: 200, desc: "Cross-system feature, full car environment"     },
+    ];
+
+    const MULTIPLIERS = [
+      { label: "Main Quest ticket",                   mult: "+20%",     color: "#F39C12" },
+      { label: "On-time delivery (before sprint end)", mult: "+15%",    color: "#27AE60" },
+      { label: "Critical bug fixed",                  mult: "+25%",     color: "#E74C3C" },
+      { label: "Blocker resolved (own blocker)",      mult: "+10%",     color: "#3498DB" },
+      { label: "Helped unblock a teammate",           mult: "+20 flat", color: "#9B59B6" },
+      { label: "Streak: 5 tickets in one sprint",     mult: "+50 flat", color: "#E67E22" },
+      { label: "Attended all standups this week",     mult: "+10 flat", color: "#1ABC9C" },
+    ];
+
+    const ACHIEVEMENTS = [
+      { id: "first_blood",  icon: "🩸", name: "First Blood",       desc: "Complete your first ticket",                       xp: 20,  rarity: "common"    },
+      { id: "bug_slayer",   icon: "🐛", name: "Bug Slayer",        desc: "Fix 5 bugs in one sprint",                         xp: 60,  rarity: "uncommon"  },
+      { id: "speed_demon",  icon: "⚡", name: "Speed Demon",       desc: "Close 3 tickets before Wednesday in a sprint",     xp: 50,  rarity: "uncommon"  },
+      { id: "unbreakable",  icon: "🪨", name: "Unbreakable",       desc: "Zero blockers for an entire sprint",               xp: 80,  rarity: "rare"      },
+      { id: "team_player",  icon: "🤝", name: "Team Player",       desc: "Help unblock a teammate 3 times",                  xp: 70,  rarity: "uncommon"  },
+      { id: "on_the_rails", icon: "🚂", name: "On the Rails",      desc: "Attend all standups for two consecutive weeks",    xp: 40,  rarity: "common"    },
+      { id: "renaissance",  icon: "🎨", name: "Renaissance Dev",   desc: "Close tickets across 3 different disciplines",     xp: 100, rarity: "rare"      },
+      { id: "last_car",     icon: "🏆", name: "Last Car Standing", desc: "Highest XP earner in a sprint",                    xp: 120, rarity: "epic"      },
+      { id: "perfectionist",icon: "💎", name: "No Rework",         desc: "10 tickets closed with no revision requested",     xp: 150, rarity: "epic"      },
+      { id: "the_fixer",    icon: "🔧", name: "The Fixer",         desc: "Resolve a build-breaking issue within 1 hour",     xp: 100, rarity: "rare"      },
+      { id: "myth_maker",   icon: "📖", name: "Myth Maker",        desc: "Complete a full Main Quest chain solo",            xp: 200, rarity: "legendary" },
+      { id: "veteran",      icon: "⭐", name: "Veteran",           desc: "Reach Level 5",                                    xp: 0,   rarity: "rare"      },
+    ];
+
+    const QUEST_TYPES = [
+      { type: "Main Quest",  icon: "⚔️",  color: "#F39C12", desc: "Core MVP features. Blocking — nothing ships without them.", jira: "Label: MAIN_QUEST | Priority: High or Critical", examples: ["Crisis spawner system","FP character controller","Hull breach malfunction","Train health bar"] },
+      { type: "Side Quest",  icon: "🗺️", color: "#3498DB", desc: "Non-blocking improvements and polish. Pick up when Main Quests are clear.", jira: "Label: SIDE_QUEST | Priority: Medium or Low", examples: ["Rat footprint VFX","Station board dressing","Upgrade shop naming pass","Ambient sound loop"] },
+      { type: "Bug Hunt",    icon: "🐛",  color: "#E74C3C", desc: "Defects and regressions. Auto-elevated to Main Quest if build-breaking.", jira: "Label: BUG | Bug type field populated", examples: ["Valve interaction not replicating","Rat AI clipping through wall","Train stops on slope"] },
+      { type: "Lore Entry",  icon: "📜",  color: "#8E44AD", desc: "Documentation, GDD updates, Confluence pages. Essential and XP-earning.", jira: "Label: DOCS | Assignee: usually Jakub", examples: ["Update GDD car 02 section","Write prop content list","Diegetic language guide"] },
+    ];
+
+    const TEAM = [
+      { name: "Jonathan", role: "Game Designer"  },
+      { name: "Jeremia",  role: "Game Designer"  },
+      { name: "Piotr",    role: "Game Designer"  },
+      { name: "Jakub",    role: "Game Designer"  },
+      { name: "Bartosz",  role: "Artist"         },
+      { name: "Louis",    role: "Artist"         },
+      { name: "Emely",    role: "Artist"         },
+      { name: "Allan",    role: "Programmer"     },
+      { name: "Milton",   role: "Programmer"     },
+    ];
+
+    // ── HELPERS ──────────────────────────────────────────────────────
+
+    function getLevelInfo(xp) {
+      let current = LEVELS[0], next = LEVELS[1];
+      for (let i = 0; i < LEVELS.length; i++) {
+        if (xp >= LEVELS[i].xp) { current = LEVELS[i]; next = LEVELS[i + 1] || null; }
+      }
+      const progress = next ? Math.round(((xp - current.xp) / (next.xp - current.xp)) * 100) : 100;
+      return { current, next, progress };
+    }
+
+    const rarityColor = { common: "#95A5A6", uncommon: "#27AE60", rare: "#3498DB", epic: "#9B59B6", legendary: "#F39C12" };
+
+    function initData() {
+      const initial = {};
+      TEAM.forEach(m => { initial[m.name] = { xp: 0, classId: null, achievements: [] }; });
+      return initial;
+    }
+
+    // ── COMPONENT ────────────────────────────────────────────────────
+
+    function LastCarRPG() {
+      const [tab, setTab]               = useState("leaderboard");
+      const [memberData, setMemberData] = useState({});
+      const [loading, setLoading]       = useState(true);
+      const [editingXP, setEditingXP]   = useState(null);
+      const [xpInput, setXpInput]       = useState("");
+      const [selectedClass, setSelectedClass] = useState(null);
+      const [classTarget, setClassTarget]     = useState(null);
+      const [savedMsg, setSavedMsg]     = useState("");
+
+      // ═══════════════════════════════════════════════════════════════
+      // CHANGE 4 OF 6 — Admin mode state
+      // isAdmin starts false for everyone. The lock button in the
+      // header calls handleAdminToggle() to authenticate.
+      // ═══════════════════════════════════════════════════════════════
+      const [isAdmin, setIsAdmin] = useState(false);
+
+      const handleAdminToggle = () => {
+        if (isAdmin) {
+          // Already admin — log out
+          setIsAdmin(false);
+          setSavedMsg("Admin mode off");
+          setTimeout(() => setSavedMsg(""), 2000);
+        } else {
+          // Prompt for password using the browser's built-in dialog
+          const pw = window.prompt("Enter admin password:");
+          if (pw === ADMIN_PASSWORD) {
+            setIsAdmin(true);
+            setSavedMsg("Admin mode on ✓");
+            setTimeout(() => setSavedMsg(""), 2000);
+          } else if (pw !== null) {
+            // pw === null means the user clicked Cancel — do nothing
+            alert("Incorrect password.");
+          }
+        }
+      };
+
+      // ═══════════════════════════════════════════════════════════════
+      // CHANGE 5 OF 6 — Load data from Firestore instead of localStorage
+      //
+      // onSnapshot sets up a real-time listener. Every time the
+      // Firestore document is updated (by you, the admin), ALL open
+      // browser tabs receive the new data automatically — no page
+      // refresh needed.
+      //
+      // The function returned by onSnapshot is the unsubscribe handle.
+      // Returning it from useEffect means React calls it on unmount,
+      // which is correct cleanup behaviour.
+      // ═══════════════════════════════════════════════════════════════
+      useEffect(() => {
+        const unsubscribe = FS_DOC.onSnapshot(
+          (snap) => {
+            if (snap.exists) {
+              // Document found — use the stored data
+              setMemberData(snap.data());
+            } else {
+              // First ever load: document doesn't exist yet.
+              // Write the initial blank state so it appears in Firestore.
+              const blank = initData();
+              FS_DOC.set(blank).catch(console.error);
+              setMemberData(blank);
+            }
+            setLoading(false);
+          },
+          (error) => {
+            // If Firestore is unreachable (e.g. bad config), fall back
+            // gracefully so the page at least renders.
+            console.error("Firestore error:", error);
+            setMemberData(initData());
+            setLoading(false);
+          }
+        );
+
+        // Unsubscribe when the component unmounts
+        return () => unsubscribe();
+      }, []);
+
+      // ═══════════════════════════════════════════════════════════════
+      // CHANGE 6 OF 6 — Save to Firestore instead of localStorage
+      //
+      // FS_DOC.set(data) overwrites the entire document with the new
+      // state. Because onSnapshot is listening, every viewer tab will
+      // receive the update within ~1 second automatically.
+      // ═══════════════════════════════════════════════════════════════
+      const save = useCallback((data) => {
+        FS_DOC.set(data)
+          .then(() => {
+            setSavedMsg("Saved ✓");
+            setTimeout(() => setSavedMsg(""), 2000);
+          })
+          .catch((err) => {
+            console.error(err);
+            setSavedMsg("Save failed ✗");
+            setTimeout(() => setSavedMsg(""), 3000);
+          });
+      }, []);
+
+      // ── These three action handlers are unchanged in logic.
+      //    They now call the new Firestore-backed save() above.
+
+      const updateXP = (name, newXP) => {
+        const updated = { ...memberData, [name]: { ...memberData[name], xp: Math.max(0, parseInt(newXP) || 0) } };
+        setMemberData(updated);
+        save(updated);
+        setEditingXP(null);
+      };
+
+      const assignClass = (name, classId) => {
+        const updated = { ...memberData, [name]: { ...memberData[name], classId } };
+        setMemberData(updated);
+        save(updated);
+        setClassTarget(null);
+        setSelectedClass(null);
+      };
+
+      const toggleAchievement = (name, achId) => {
+        const current    = memberData[name]?.achievements || [];
+        const isEarned   = current.includes(achId);
+        const updatedAch = isEarned ? current.filter(a => a !== achId) : [...current, achId];
+        const bonusXP    = isEarned ? 0 : (ACHIEVEMENTS.find(a => a.id === achId)?.xp || 0);
+        const updated    = { ...memberData, [name]: { ...memberData[name], achievements: updatedAch, xp: (memberData[name]?.xp || 0) + bonusXP } };
+        setMemberData(updated);
+        save(updated);
+      };
+
+      const sorted = [...TEAM].sort((a, b) => (memberData[b.name]?.xp || 0) - (memberData[a.name]?.xp || 0));
+
+      const TABS = [
+        { id: "leaderboard",  label: "⚔ Leaderboard"  },
+        { id: "classes",      label: "🎭 Classes"       },
+        { id: "xp",           label: "✨ XP System"     },
+        { id: "quests",       label: "📜 Quest Types"   },
+        { id: "achievements", label: "🏆 Achievements"  },
+      ];
+
+      return (
+        <div style={{ fontFamily: "'Georgia', serif", background: "#0D0D0D", minHeight: "100vh", color: "#E8DCC8" }}>
+          <style>{`
+            * { box-sizing: border-box; }
+            ::-webkit-scrollbar { width: 6px; }
+            ::-webkit-scrollbar-track { background: #1A1A1A; }
+            ::-webkit-scrollbar-thumb { background: #8B6914; border-radius: 3px; }
+            .tab-btn { font-family: 'Cinzel', serif; letter-spacing: 0.04em; font-size: 11px; padding: 8px 16px; background: transparent; border: 1px solid #3A3020; color: #8B7355; cursor: pointer; transition: all 0.2s; }
+            .tab-btn:hover { color: #D4A843; border-color: #6B4F12; }
+            .tab-btn.active { background: #1E1608; color: #D4A843; border-color: #D4A843; }
+            .gold { color: #D4A843; }
+            .card { background: #141008; border: 1px solid #2C2210; border-radius: 4px; }
+            .rank-1 { color: #FFD700; }
+            .rank-2 { color: #C0C0C0; }
+            .rank-3 { color: #CD7F32; }
+            .xp-bar-bg { background: #1A140A; border-radius: 2px; height: 6px; overflow: hidden; }
+            .xp-bar-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, #8B6914, #D4A843); transition: width 0.6s ease; }
+            .class-card { background: #0F0A04; border: 1px solid #2C2210; border-radius: 4px; padding: 14px; cursor: pointer; transition: all 0.2s; }
+            .class-card:hover { border-color: #8B6914; background: #1A1208; transform: translateY(-1px); }
+            .class-card.selected { border-color: #D4A843; background: #1E1608; }
+            .quest-card { background: #0F0A04; border: 1px solid #2C2210; border-radius: 4px; padding: 14px; }
+            .ach-card { background: #0F0A04; border: 1px solid #2C2210; border-radius: 4px; padding: 10px 12px; display: flex; align-items: flex-start; gap: 10px; transition: border-color 0.2s; }
+            .ach-card.clickable { cursor: pointer; }
+            .ach-card.clickable:hover { border-color: #6B4F12; }
+            .ach-card.unlocked { border-color: #8B6914; background: #1A1208; }
+            .edit-input { background: #1A140A; border: 1px solid #D4A843; color: #E8DCC8; padding: 4px 8px; font-family: 'Crimson Text', serif; font-size: 14px; border-radius: 2px; width: 80px; }
+            .btn { font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 0.05em; padding: 5px 12px; border: 1px solid #8B6914; background: transparent; color: #D4A843; cursor: pointer; border-radius: 2px; transition: all 0.2s; }
+            .btn:hover { background: #1E1608; }
+            .btn-primary { background: #1E1608; border-color: #D4A843; }
+            .saved-badge { font-family: 'Cinzel', serif; font-size: 10px; color: #27AE60; letter-spacing: 0.05em; }
+            .admin-btn { font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 0.05em; padding: 4px 10px; border-radius: 2px; cursor: pointer; transition: all 0.2s; border: 1px solid; }
+            .admin-btn.off { border-color: #3A3020; background: transparent; color: #4A3820; }
+            .admin-btn.off:hover { border-color: #6B4F12; color: #8B7355; }
+            .admin-btn.on { border-color: #D4A843; background: #1E1608; color: #D4A843; }
+          `}</style>
+
+          {/* ── HEADER ── */}
+          <div style={{ background: "linear-gradient(180deg,#1A0F00 0%,#0D0D0D 100%)", padding: "28px 28px 20px", borderBottom: "1px solid #3A2A10" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div>
+                <div style={{ fontFamily: "'Cinzel',serif", fontSize: "22px", fontWeight: 700, color: "#D4A843", letterSpacing: "0.08em" }}>WONKA 43 — CREW CHRONICLES</div>
+                <div style={{ fontFamily: "'Crimson Text',serif", fontSize: "14px", color: "#8B7355", marginTop: "2px" }}>Production RPG · Sprint Tracking · Crew Advancement</div>
+              </div>
+
+              {/* ── Admin lock button + status messages ── */}
+              <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px" }}>
+                {savedMsg && <span className="saved-badge">{savedMsg}</span>}
+
+                {/* 
+                  Admin toggle button.
+                  Shows 🔒 ADMIN to all users (it blends in as a footer detail).
+                  Clicking it prompts for the password.
+                  Once authenticated, it turns gold and shows 🔓 ADMIN MODE.
+                */}
+                <button
+                  className={`admin-btn ${isAdmin ? "on" : "off"}`}
+                  onClick={handleAdminToggle}
+                  title={isAdmin ? "Admin mode active — click to exit" : "Admin login"}
+                >
+                  {isAdmin ? "🔓 ADMIN MODE" : "🔒 ADMIN"}
+                </button>
+
+                <div style={{ fontFamily: "'Cinzel',serif", fontSize: "10px", color: "#4A3820", marginTop: "2px" }}>FutureGames · GP3</div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "4px", marginTop: "20px", flexWrap: "wrap" }}>
+              {TABS.map(t => (
+                <button key={t.id} className={`tab-btn ${tab === t.id ? "active" : ""}`} onClick={() => setTab(t.id)}>{t.label}</button>
+              ))}
+            </div>
+          </div>
+
+          {/* ── BODY ── */}
+          <div style={{ padding: "24px 28px" }}>
+            {loading ? (
+              <div style={{ textAlign: "center", padding: "60px", fontFamily: "'Cinzel',serif", color: "#6B4F12", letterSpacing: "0.1em" }}>LOADING CHRONICLES...</div>
+            ) : (
+              <>
+                {/* LEADERBOARD */}
+                {tab === "leaderboard" && (
+                  <div>
+                    <div style={{ fontFamily: "'Cinzel',serif", fontSize: "13px", color: "#8B7355", letterSpacing: "0.1em", marginBottom: "20px" }}>✦ CREW STANDINGS ✦</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      {sorted.map((member, idx) => {
+                        const data = memberData[member.name] || { xp: 0, classId: null, achievements: [] };
+                        const cls  = CLASSES.find(c => c.id === data.classId);
+                        const { current, next, progress } = getLevelInfo(data.xp);
+                        const rankCls = idx === 0 ? "rank-1" : idx === 1 ? "rank-2" : idx === 2 ? "rank-3" : "";
+                        return (
+                          <div key={member.name} className="card" style={{ padding: "14px 16px", display: "grid", gridTemplateColumns: "36px 1fr auto", alignItems: "center", gap: "16px" }}>
+                            <div style={{ fontFamily: "'Cinzel',serif", fontSize: "20px", fontWeight: 700, textAlign: "center" }} className={rankCls}>
+                              {idx === 0 ? "👑" : idx === 1 ? "⚔️" : idx === 2 ? "🏹" : `${idx + 1}`}
+                            </div>
+                            <div>
+                              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px", flexWrap: "wrap" }}>
+                                {cls && <span style={{ fontSize: "16px" }}>{cls.icon}</span>}
+                                <span style={{ fontFamily: "'Cinzel',serif", fontSize: "14px", color: "#E8DCC8" }}>{member.name}</span>
+                                <span style={{ fontFamily: "'Crimson Text',serif", fontSize: "12px", color: "#6B4F12" }}>{member.role}</span>
+                                {cls && <span style={{ fontFamily: "'Cinzel',serif", fontSize: "10px", padding: "1px 8px", border: `1px solid ${cls.color}40`, color: cls.color, borderRadius: "2px" }}>{cls.name}</span>}
+                              </div>
+                              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                <span style={{ fontFamily: "'Cinzel',serif", fontSize: "11px", color: "#D4A843", whiteSpace: "nowrap" }}>Lv.{current.level} {current.title}</span>
+                                <div className="xp-bar-bg" style={{ flex: 1 }}>
+                                  <div className="xp-bar-fill" style={{ width: `${progress}%` }} />
+                                </div>
+                                <span style={{ fontFamily: "'Crimson Text',serif", fontSize: "12px", color: "#8B7355", whiteSpace: "nowrap" }}>
+                                  {next ? `${data.xp} / ${next.xp} XP` : `${data.xp} XP — MAX`}
+                                </span>
+                              </div>
+                              {data.achievements?.length > 0 && (
+                                <div style={{ marginTop: "5px", display: "flex", gap: "4px", flexWrap: "wrap" }}>
+                                  {data.achievements.map(achId => {
+                                    const ach = ACHIEVEMENTS.find(a => a.id === achId);
+                                    return ach ? <span key={achId} title={ach.name} style={{ fontSize: "14px" }}>{ach.icon}</span> : null;
+                                  })}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* ── Right column: XP display + admin-only edit controls ── */}
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px" }}>
+                              <div style={{ fontFamily: "'Cinzel',serif", fontSize: "18px", color: "#D4A843", fontWeight: 700 }}>
+                                {data.xp} <span style={{ fontSize: "11px", color: "#6B4F12" }}>XP</span>
+                              </div>
+
+                              {/* Edit controls — only rendered when isAdmin is true */}
+                              {isAdmin && (
+                                editingXP === member.name ? (
+                                  <div style={{ display: "flex", gap: "6px" }}>
+                                    <input className="edit-input" value={xpInput} onChange={e => setXpInput(e.target.value)} onKeyDown={e => e.key === "Enter" && updateXP(member.name, xpInput)} autoFocus placeholder="XP" />
+                                    <button className="btn btn-primary" onClick={() => updateXP(member.name, xpInput)}>Set</button>
+                                    <button className="btn" onClick={() => setEditingXP(null)}>✕</button>
+                                  </div>
+                                ) : (
+                                  <div style={{ display: "flex", gap: "6px" }}>
+                                    <button className="btn" onClick={() => { setEditingXP(member.name); setXpInput(String(data.xp)); }}>Edit XP</button>
+                                    <button className="btn" onClick={() => { setClassTarget(member.name); setTab("classes"); }}>{cls ? "Change class" : "Pick class"}</button>
+                                  </div>
+                                )
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Info box — shows different text for admin vs viewer */}
+                    <div style={{ marginTop: "20px", padding: "12px 16px", background: "#0A0800", border: "1px solid #2C2210", borderRadius: "4px" }}>
+                      {isAdmin ? (
+                        <>
+                          <div style={{ fontFamily: "'Cinzel',serif", fontSize: "10px", color: "#6B4F12", letterSpacing: "0.08em", marginBottom: "8px" }}>HOW TO UPDATE XP</div>
+                          <div style={{ fontFamily: "'Crimson Text',serif", fontSize: "13px", color: "#8B7355", lineHeight: "1.7" }}>
+                            Click <span className="gold">Edit XP</span> next to a crew member to set their total after each sprint. Calculate using the XP System tab. Update every Friday after the retrospective. Data is saved to the cloud automatically.
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div style={{ fontFamily: "'Cinzel',serif", fontSize: "10px", color: "#6B4F12", letterSpacing: "0.08em", marginBottom: "8px" }}>CHRONICLES</div>
+                          <div style={{ fontFamily: "'Crimson Text',serif", fontSize: "13px", color: "#8B7355", lineHeight: "1.7" }}>
+                            Standings are updated every Friday after the sprint retrospective. Check back then to see who advanced.
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* CLASSES */}
+                {tab === "classes" && (
+                  <div>
+                    <div style={{ fontFamily: "'Cinzel',serif", fontSize: "13px", color: "#8B7355", letterSpacing: "0.1em", marginBottom: "8px" }}>✦ CHOOSE YOUR CLASS ✦</div>
+                    {/* Class assignment prompt only shown in admin mode */}
+                    {isAdmin && classTarget && <div style={{ fontFamily: "'Crimson Text',serif", fontSize: "14px", color: "#D4A843", marginBottom: "16px" }}>Assigning class for: <strong>{classTarget}</strong> — select below then confirm.</div>}
+                    {!classTarget && <div style={{ fontFamily: "'Crimson Text',serif", fontSize: "14px", color: "#8B7355", marginBottom: "16px" }}>Browse all classes. {isAdmin ? <>To assign, go to the Leaderboard and click "Pick class" on a crew member.</> : <>Classes are assigned by the Game Producer.</>}</div>}
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(220px,1fr))", gap: "10px" }}>
+                      {CLASSES.map(cls => (
+                        <div key={cls.id}
+                          className={`class-card ${selectedClass === cls.id ? "selected" : ""}`}
+                          style={{ borderColor: selectedClass === cls.id ? cls.color : undefined, cursor: isAdmin ? "pointer" : "default" }}
+                          onClick={() => isAdmin && setSelectedClass(cls.id)}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+                            <span style={{ fontSize: "24px" }}>{cls.icon}</span>
+                            <div>
+                              <div style={{ fontFamily: "'Cinzel',serif", fontSize: "13px", color: cls.color }}>{cls.name}</div>
+                              <div style={{ fontFamily: "'Cinzel',serif", fontSize: "9px", color: "#4A3820", letterSpacing: "0.05em" }}>{cls.trait.toUpperCase()}</div>
+                            </div>
+                          </div>
+                          <div style={{ fontFamily: "'Crimson Text',serif", fontSize: "13px", color: "#8B7355", lineHeight: "1.5", marginBottom: "8px" }}>{cls.desc}</div>
+                          <div style={{ fontFamily: "'Crimson Text',serif", fontSize: "12px", color: "#D4A843", padding: "4px 8px", background: "#1A1208", borderRadius: "2px" }}>{cls.bonus}</div>
+                          {/* Assignment confirm button only in admin mode */}
+                          {isAdmin && classTarget && selectedClass === cls.id && (
+                            <button className="btn btn-primary" style={{ marginTop: "10px", width: "100%" }} onClick={() => assignClass(classTarget, cls.id)}>
+                              Assign to {classTarget}
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* XP SYSTEM — unchanged, no admin gating needed */}
+                {tab === "xp" && (
+                  <div>
+                    <div style={{ fontFamily: "'Cinzel',serif", fontSize: "13px", color: "#8B7355", letterSpacing: "0.1em", marginBottom: "20px" }}>✦ XP & ADVANCEMENT ✦</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+                      <div>
+                        <div style={{ fontFamily: "'Cinzel',serif", fontSize: "11px", color: "#6B4F12", letterSpacing: "0.08em", marginBottom: "10px" }}>TICKET SIZE → BASE XP</div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                          {XP_TABLE.map(row => (
+                            <div key={row.size} className="card" style={{ padding: "10px 14px", display: "grid", gridTemplateColumns: "40px 80px 60px 1fr", alignItems: "center", gap: "10px" }}>
+                              <div style={{ fontFamily: "'Cinzel',serif", fontSize: "14px", color: "#D4A843", fontWeight: 700 }}>{row.size}</div>
+                              <div style={{ fontFamily: "'Cinzel',serif", fontSize: "11px", color: "#E8DCC8" }}>{row.label}</div>
+                              <div style={{ fontFamily: "'Cinzel',serif", fontSize: "15px", color: "#D4A843" }}>{row.xp} <span style={{ fontSize: "9px", color: "#6B4F12" }}>XP</span></div>
+                              <div style={{ fontFamily: "'Crimson Text',serif", fontSize: "12px", color: "#6B4F12" }}>{row.desc}</div>
+                            </div>
+                          ))}
+                        </div>
+                        <div style={{ marginTop: "16px" }}>
+                          <div style={{ fontFamily: "'Cinzel',serif", fontSize: "11px", color: "#6B4F12", letterSpacing: "0.08em", marginBottom: "10px" }}>XP MULTIPLIERS & BONUSES</div>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+                            {MULTIPLIERS.map((m, i) => (
+                              <div key={i} className="card" style={{ padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <span style={{ fontFamily: "'Crimson Text',serif", fontSize: "13px", color: "#8B7355" }}>{m.label}</span>
+                                <span style={{ fontFamily: "'Cinzel',serif", fontSize: "12px", color: m.color, fontWeight: 600 }}>{m.mult}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontFamily: "'Cinzel',serif", fontSize: "11px", color: "#6B4F12", letterSpacing: "0.08em", marginBottom: "10px" }}>LEVEL THRESHOLDS</div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+                          {LEVELS.map((lv, i) => (
+                            <div key={lv.level} className="card" style={{ padding: "8px 14px", display: "grid", gridTemplateColumns: "32px 1fr auto", alignItems: "center", gap: "10px" }}>
+                              <div style={{ fontFamily: "'Cinzel',serif", fontSize: "12px", color: "#6B4F12" }}>Lv.{lv.level}</div>
+                              <div style={{ fontFamily: "'Cinzel',serif", fontSize: "12px", color: i === 9 ? "#D4A843" : "#E8DCC8" }}>{lv.title}</div>
+                              <div style={{ fontFamily: "'Crimson Text',serif", fontSize: "13px", color: "#D4A843" }}>{lv.xp === 0 ? "—" : `${lv.xp} XP`}</div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="card" style={{ padding: "14px", marginTop: "16px" }}>
+                          <div style={{ fontFamily: "'Cinzel',serif", fontSize: "11px", color: "#6B4F12", letterSpacing: "0.08em", marginBottom: "8px" }}>EXAMPLE SPRINT CALC</div>
+                          <div style={{ fontFamily: "'Crimson Text',serif", fontSize: "13px", color: "#8B7355", lineHeight: "1.8" }}>
+                            3× M tickets = 180 XP<br />
+                            1× L Main Quest = 120 × 1.20 = <span className="gold">144 XP</span><br />
+                            On-time bonus = 144 × 1.15 = <span className="gold">165 XP</span><br />
+                            Standup streak = +10 flat<br />
+                            <hr style={{ borderColor: "#2C2210", margin: "8px 0" }} />
+                            <span className="gold" style={{ fontFamily: "'Cinzel',serif" }}>Total: ~355 XP</span> in one sprint<br />
+                            <span style={{ fontSize: "11px", color: "#4A3820" }}>That's Lv.2 → Lv.3 in one strong sprint.</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* QUEST TYPES — unchanged */}
+                {tab === "quests" && (
+                  <div>
+                    <div style={{ fontFamily: "'Cinzel',serif", fontSize: "13px", color: "#8B7355", letterSpacing: "0.1em", marginBottom: "20px" }}>✦ QUEST TYPES & JIRA LABELS ✦</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: "12px" }}>
+                      {QUEST_TYPES.map(q => (
+                        <div key={q.type} className="quest-card" style={{ borderLeft: `3px solid ${q.color}` }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
+                            <span style={{ fontSize: "22px" }}>{q.icon}</span>
+                            <span style={{ fontFamily: "'Cinzel',serif", fontSize: "14px", color: q.color }}>{q.type}</span>
+                          </div>
+                          <div style={{ fontFamily: "'Crimson Text',serif", fontSize: "13px", color: "#8B7355", lineHeight: "1.6", marginBottom: "10px" }}>{q.desc}</div>
+                          <div style={{ background: "#1A1208", border: "1px solid #2C2210", borderRadius: "2px", padding: "6px 10px", marginBottom: "10px" }}>
+                            <div style={{ fontFamily: "'Cinzel',serif", fontSize: "9px", color: "#6B4F12", letterSpacing: "0.06em", marginBottom: "3px" }}>JIRA CONFIG</div>
+                            <div style={{ fontFamily: "'Crimson Text',serif", fontSize: "12px", color: "#D4A843" }}>{q.jira}</div>
+                          </div>
+                          <div style={{ fontFamily: "'Cinzel',serif", fontSize: "9px", color: "#6B4F12", letterSpacing: "0.06em", marginBottom: "5px" }}>EXAMPLES</div>
+                          {q.examples.map((ex, i) => (
+                            <div key={i} style={{ fontFamily: "'Crimson Text',serif", fontSize: "12px", color: "#6B4F12", padding: "2px 0", borderBottom: "1px solid #1A140A" }}>· {ex}</div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ACHIEVEMENTS */}
+                {tab === "achievements" && (
+                  <div>
+                    <div style={{ fontFamily: "'Cinzel',serif", fontSize: "13px", color: "#8B7355", letterSpacing: "0.1em", marginBottom: "8px" }}>✦ DEEDS & HONOURS ✦</div>
+                    <div style={{ fontFamily: "'Crimson Text',serif", fontSize: "13px", color: "#6B4F12", marginBottom: "16px" }}>
+                      {isAdmin
+                        ? "Click an achievement to mark it as earned. XP is added automatically."
+                        : "Achievements earned by each crew member during the campaign."}
+                    </div>
+                    {sorted.map(member => {
+                      const data   = memberData[member.name] || { xp: 0, classId: null, achievements: [] };
+                      const earned = data.achievements || [];
+                      return (
+                        <div key={member.name} style={{ marginBottom: "20px" }}>
+                          <div style={{ fontFamily: "'Cinzel',serif", fontSize: "12px", color: "#D4A843", letterSpacing: "0.06em", marginBottom: "8px", display: "flex", alignItems: "center", gap: "10px" }}>
+                            {member.name}
+                            <span style={{ fontSize: "10px", color: "#6B4F12" }}>{earned.length}/{ACHIEVEMENTS.length} unlocked</span>
+                          </div>
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(220px,1fr))", gap: "6px" }}>
+                            {ACHIEVEMENTS.map(ach => {
+                              const isEarned = earned.includes(ach.id);
+                              return (
+                                <div key={ach.id}
+                                  className={`ach-card ${isEarned ? "unlocked" : ""} ${isAdmin ? "clickable" : ""}`}
+                                  onClick={() => isAdmin && toggleAchievement(member.name, ach.id)}
+                                  style={{ opacity: isEarned ? 1 : 0.5 }}>
+                                  <span style={{ fontSize: "20px", flexShrink: 0 }}>{ach.icon}</span>
+                                  <div style={{ flex: 1 }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "2px" }}>
+                                      <span style={{ fontFamily: "'Cinzel',serif", fontSize: "11px", color: isEarned ? "#D4A843" : "#8B7355" }}>{ach.name}</span>
+                                      <span style={{ fontFamily: "'Cinzel',serif", fontSize: "10px", color: rarityColor[ach.rarity], textTransform: "uppercase" }}>{ach.rarity}</span>
+                                    </div>
+                                    <div style={{ fontFamily: "'Crimson Text',serif", fontSize: "11px", color: "#6B4F12", lineHeight: "1.3" }}>{ach.desc}</div>
+                                    {ach.xp > 0 && <div style={{ fontFamily: "'Cinzel',serif", fontSize: "10px", color: "#D4A843", marginTop: "3px" }}>+{ach.xp} XP</div>}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ── MOUNT ────────────────────────────────────────────────────────
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<LastCarRPG />);
+  </script>
+</body>
+</html>
