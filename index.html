@@ -12,6 +12,9 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
+  <!-- Firebase Authentication SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
   <style>
@@ -23,24 +26,25 @@
   <div id="root"></div>
 
   <script>
-  const FIREBASE_CONFIG = {
-    apiKey:            "AIzaSyB0EuGSoyNbomz4ojLh89yXzbw4AJJkAOY",
-    authDomain:        "frost-haul.firebaseapp.com",
-    projectId:         "frost-haul",
-    storageBucket:     "frost-haul.firebasestorage.app",
-    messagingSenderId: "58210065772",
-    appId:             "1:58210065772:web:0cf565cbf15e995814e749"
-  };
+    const FIREBASE_CONFIG = {
+      apiKey:            "AIzaSyB0EuGSoyNbomz4ojLh89yXzbw4AJJkAOY",
+      authDomain:        "frost-haul.firebaseapp.com",
+      projectId:         "frost-haul",
+      storageBucket:     "frost-haul.firebasestorage.app",
+      messagingSenderId: "58210065772",
+      appId:             "1:58210065772:web:0cf565cbf15e995814e749"
+    };
 
   firebase.initializeApp(FIREBASE_CONFIG);
 
   const db = firebase.firestore();
+
+  const auth = firebase.auth();
 </script>
 
   <script type="text/babel">
     const { useState, useEffect, useCallback } = React;
 
-    const ADMIN_PASSWORD = "wonka43admin";
     const FS_DOC = db.collection("leaderboard").doc("state");
 
     // ── DATA ─────────────────────────────────────────────────────────
@@ -157,23 +161,39 @@
       const [savedMsg, setSavedMsg]     = useState("");
       const [isAdmin, setIsAdmin]       = useState(false);
 
-      const handleAdminToggle = () => {
-        if (isAdmin) {
-          setIsAdmin(false);
-          setSavedMsg("Admin mode off");
+      // ═══════════════════════════════════════════════════════════════
+      //  isAdmin is driven by Firebase Auth.//
+      const [isAdmin,        setIsAdmin       ] = useState(false);
+      const [showLoginForm,  setShowLoginForm ] = useState(false);
+      const [loginEmail,     setLoginEmail    ] = useState("");
+      const [loginPassword,  setLoginPassword ] = useState("");
+      const [loginError,     setLoginError    ] = useState("");
+      const [loginLoading,   setLoginLoading  ] = useState(false);
+ 
+      // Sync isAdmin with Firebase Auth session on every page load
+      useEffect(() => {
+        const unsub = auth.onAuthStateChanged(user => {
+          setIsAdmin(!!user);  // true if logged in, false if not
+        });
+        return () => unsub();
+      }, []);
+ 
+      const handleLogin = async () => {
+        setLoginError("");
+        setLoginLoading(true);
+        try {
+          await auth.signInWithEmailAndPassword(loginEmail, loginPassword);
+          // onAuthStateChanged above will set isAdmin = true automatically
+          setShowLoginForm(false);
+          setLoginEmail("");
+          setLoginPassword("");
+          setSavedMsg("Admin mode on ✓");
           setTimeout(() => setSavedMsg(""), 2000);
-        } else {
-          const pw = window.prompt("Enter admin password:");
-          if (pw === ADMIN_PASSWORD) {
-            setIsAdmin(true);
-            setSavedMsg("Admin mode on ✓");
-            setTimeout(() => setSavedMsg(""), 2000);
-          } else if (pw !== null) {
-            alert("Incorrect password.");
-          }
-        }
-      };
+        } catch (err) {
+         
 
+    // ═══════════════════════════════════════════════════════════════
+    // Load data from Firestore instead of localStorage //
       useEffect(() => {
         const unsubscribe = FS_DOC.onSnapshot(
           (snap) => {
