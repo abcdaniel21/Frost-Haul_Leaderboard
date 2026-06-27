@@ -5,14 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FrostHaul — Crew Chronicles</title>
 
-  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- React + ReactDOM, version-pinned -->
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
 
+  <!-- htm: JSX-like markup via tagged template literals. No eval / new Function, so it
+       runs under a strict Content-Security-Policy (unlike Babel-standalone). -->
+  <script src="https://unpkg.com/htm@3.1.1/dist/htm.umd.js"></script>
+
+  <!-- Firebase SDK (already version-pinned) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-
-  <!-- Firebase Authentication SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -35,15 +38,15 @@
       appId:             "1:58210065772:web:0cf565cbf15e995814e749"
     };
 
-  firebase.initializeApp(FIREBASE_CONFIG);
+    firebase.initializeApp(FIREBASE_CONFIG);
+    const db   = firebase.firestore();
+    const auth = firebase.auth();
+  </script>
 
-  const db = firebase.firestore();
-
-  const auth = firebase.auth();
-</script>
-
-  <script type="text/babel">
+  <!-- Plain script (no type="text/babel"). htm needs no transform step. -->
+  <script>
     const { useState, useEffect, useCallback } = React;
+    const html = htm.bind(React.createElement);
 
     const FS_DOC = db.collection("leaderboard").doc("state");
 
@@ -203,6 +206,7 @@
         setSavedMsg("Admin mode off");
         setTimeout(() => setSavedMsg(""), 2000);
       };
+
       useEffect(() => {
         const unsubscribe = FS_DOC.onSnapshot(
           (snap) => {
@@ -272,9 +276,7 @@
         { id: "achievements", label: "🏆 Achievements"  },
       ];
 
-      return (
-        <div style={{ fontFamily: "'Georgia', serif", background: "#0A0F14", minHeight: "100vh", color: "#F1F5F9" }}>
-          <style>{`
+      const CSS = `
             * { box-sizing: border-box; }
             ::-webkit-scrollbar { width: 6px; }
             ::-webkit-scrollbar-track { background: #0E1620; }
@@ -306,57 +308,61 @@
             .admin-btn.off { border-color: #23354A; background: transparent; color: #465E75; }
             .admin-btn.off:hover { border-color: #354B64; color: #7A93A6; }
             .admin-btn.on { border-color: #58C7EB; background: #142132; color: #58C7EB; }
-          `}</style>
+          `;
 
-          {/* ── HEADER ── */}
-          <div style={{ background: "linear-gradient(180deg, #162435 0%, #0A0F14 100%)", padding: "28px 28px 20px", borderBottom: "1px solid #203145" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+      return html`
+        <div style=${{ fontFamily: "'Georgia', serif", background: "#0A0F14", minHeight: "100vh", color: "#F1F5F9" }}>
+          <style>${CSS}</style>
+
+          ${/* ── HEADER ── */ null}
+          <div style=${{ background: "linear-gradient(180deg, #162435 0%, #0A0F14 100%)", padding: "28px 28px 20px", borderBottom: "1px solid #203145" }}>
+            <div style=${{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div>
-                <div style={{ fontFamily: "'Cinzel',serif", fontSize: "22px", fontWeight: 700, color: "#58C7EB", letterSpacing: "0.08em", textShadow: "0 0 10px rgba(88,199,235,0.2)" }}>FROST HAUL — CREW CHRONICLES</div>
-                <div style={{ fontFamily: "'Crimson Text',serif", fontSize: "14px", color: "#7A93A6", marginTop: "2px" }}>Production RPG · Sprint Tracking · Crew Advancement</div>
+                <div style=${{ fontFamily: "'Cinzel',serif", fontSize: "22px", fontWeight: 700, color: "#58C7EB", letterSpacing: "0.08em", textShadow: "0 0 10px rgba(88,199,235,0.2)" }}>FROST HAUL — CREW CHRONICLES</div>
+                <div style=${{ fontFamily: "'Crimson Text',serif", fontSize: "14px", color: "#7A93A6", marginTop: "2px" }}>Production RPG · Sprint Tracking · Crew Advancement</div>
               </div>
 
-              <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px" }}>
-                {savedMsg && <span className="saved-badge">{savedMsg}</span>}
+              <div style=${{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px" }}>
+                ${savedMsg && html`<span className="saved-badge">${savedMsg}</span>`}
                 <button
-                  className={`admin-btn ${isAdmin ? "on" : "off"}`}
-                  onClick={() => isAdmin ? handleLogout() : setShowLoginForm(true)}
-                  title={isAdmin ? "Logged in as admin — click to sign out" : "Admin sign in"}
+                  className=${`admin-btn ${isAdmin ? "on" : "off"}`}
+                  onClick=${() => isAdmin ? handleLogout() : setShowLoginForm(true)}
+                  title=${isAdmin ? "Logged in as admin — click to sign out" : "Admin sign in"}
                 >
-                  {isAdmin ? "🔓 ADMIN MODE" : "🔒 ADMIN"}
+                  ${isAdmin ? "🔓 ADMIN MODE" : "🔒 ADMIN"}
                 </button>
-                <div style={{ fontFamily: "'Cinzel',serif", fontSize: "10px", color: "#465E75", marginTop: "2px" }}>FutureGames · GP3</div>
+                <div style=${{ fontFamily: "'Cinzel',serif", fontSize: "10px", color: "#465E75", marginTop: "2px" }}>FutureGames · GP3</div>
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: "4px", marginTop: "20px", flexWrap: "wrap" }}>
-              {TABS.map(t => (
-                <button key={t.id} className={`tab-btn ${tab === t.id ? "active" : ""}`} onClick={() => setTab(t.id)}>{t.label}</button>
-              ))}
+            <div style=${{ display: "flex", gap: "4px", marginTop: "20px", flexWrap: "wrap" }}>
+              ${TABS.map(t => html`
+                <button key=${t.id} className=${`tab-btn ${tab === t.id ? "active" : ""}`} onClick=${() => setTab(t.id)}>${t.label}</button>
+              `)}
             </div>
           </div>
 
-          {/* ── LOGIN MODAL OVERLAY ── */}
-          {showLoginForm && (
-            <div style={{
+          ${/* ── LOGIN MODAL OVERLAY ── */ null}
+          ${showLoginForm && html`
+            <div style=${{
               position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)",
               display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000
             }}>
-              <div style={{
+              <div style=${{
                 background: "#121820", border: "1px solid #58C7EB", borderRadius: "4px",
                 padding: "32px", width: "320px", display: "flex", flexDirection: "column", gap: "16px"
               }}>
-                <div style={{ fontFamily: "'Cinzel',serif", fontSize: "14px", color: "#58C7EB", letterSpacing: "0.1em", textAlign: "center" }}>
+                <div style=${{ fontFamily: "'Cinzel',serif", fontSize: "14px", color: "#58C7EB", letterSpacing: "0.1em", textAlign: "center" }}>
                   🔒 ADMIN SIGN IN
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                <div style=${{ display: "flex", flexDirection: "column", gap: "10px" }}>
                   <input
                     type="email"
                     placeholder="Email"
-                    value={loginEmail}
-                    onChange={e => setLoginEmail(e.target.value)}
-                    onKeyDown={e => e.key === "Enter" && handleLogin()}
-                    style={{
+                    value=${loginEmail}
+                    onChange=${e => setLoginEmail(e.target.value)}
+                    onKeyDown=${e => e.key === "Enter" && handleLogin()}
+                    style=${{
                       background: "#1B2635", border: "1px solid #23354A", color: "#F1F5F9",
                       padding: "8px 12px", fontFamily: "'Crimson Text',serif", fontSize: "14px",
                       borderRadius: "2px", outline: "none", width: "100%"
@@ -365,295 +371,297 @@
                   <input
                     type="password"
                     placeholder="Password"
-                    value={loginPassword}
-                    onChange={e => setLoginPassword(e.target.value)}
-                    onKeyDown={e => e.key === "Enter" && handleLogin()}
-                    style={{
+                    value=${loginPassword}
+                    onChange=${e => setLoginPassword(e.target.value)}
+                    onKeyDown=${e => e.key === "Enter" && handleLogin()}
+                    style=${{
                       background: "#1B2635", border: "1px solid #23354A", color: "#F1F5F9",
                       padding: "8px 12px", fontFamily: "'Crimson Text',serif", fontSize: "14px",
                       borderRadius: "2px", outline: "none", width: "100%"
                     }}
                   />
                 </div>
-                {loginError && (
-                  <div style={{ fontFamily: "'Crimson Text',serif", fontSize: "13px", color: "#E74C3C", textAlign: "center" }}>
-                    {loginError}
+                ${loginError && html`
+                  <div style=${{ fontFamily: "'Crimson Text',serif", fontSize: "13px", color: "#E74C3C", textAlign: "center" }}>
+                    ${loginError}
                   </div>
-                )}
-                <div style={{ display: "flex", gap: "8px" }}>
-                  <button className="btn btn-primary" style={{ flex: 1, padding: "8px" }} onClick={handleLogin} disabled={loginLoading}>
-                    {loginLoading ? "..." : "SIGN IN"}
+                `}
+                <div style=${{ display: "flex", gap: "8px" }}>
+                  <button className="btn btn-primary" style=${{ flex: 1, padding: "8px" }} onClick=${handleLogin} disabled=${loginLoading}>
+                    ${loginLoading ? "..." : "SIGN IN"}
                   </button>
-                  <button className="btn" style={{ flex: 1, padding: "8px" }}
-                    onClick={() => { setShowLoginForm(false); setLoginError(""); setLoginEmail(""); setLoginPassword(""); }}>
+                  <button className="btn" style=${{ flex: 1, padding: "8px" }}
+                    onClick=${() => { setShowLoginForm(false); setLoginError(""); setLoginEmail(""); setLoginPassword(""); }}>
                     CANCEL
                   </button>
                 </div>
               </div>
             </div>
-          )}
+          `}
 
-          {/* ── BODY ── */}
-          <div style={{ padding: "24px 28px" }}>
-            {loading ? (
-              <div style={{ textAlign: "center", padding: "60px", fontFamily: "'Cinzel',serif", color: "#465E75", letterSpacing: "0.1em" }}>LOADING CHRONICLES...</div>
-            ) : (
-              <>
-                {/* LEADERBOARD */}
-                {tab === "leaderboard" && (
+          ${/* ── BODY ── */ null}
+          <div style=${{ padding: "24px 28px" }}>
+            ${loading
+              ? html`<div style=${{ textAlign: "center", padding: "60px", fontFamily: "'Cinzel',serif", color: "#465E75", letterSpacing: "0.1em" }}>LOADING CHRONICLES...</div>`
+              : html`<${React.Fragment}>
+
+                ${/* LEADERBOARD */ null}
+                ${tab === "leaderboard" && html`
                   <div>
-                    <div style={{ fontFamily: "'Cinzel',serif", fontSize: "13px", color: "#7A93A6", letterSpacing: "0.1em", marginBottom: "20px" }}>✦ CREW STANDINGS ✦</div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                      {sorted.map((member, idx) => {
+                    <div style=${{ fontFamily: "'Cinzel',serif", fontSize: "13px", color: "#7A93A6", letterSpacing: "0.1em", marginBottom: "20px" }}>✦ CREW STANDINGS ✦</div>
+                    <div style=${{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      ${sorted.map((member, idx) => {
                         const data = memberData[member.name] || { xp: 0, classId: null, achievements: [] };
                         const cls  = CLASSES.find(c => c.id === data.classId);
                         const { current, next, progress } = getLevelInfo(data.xp);
                         const rankCls = idx === 0 ? "rank-1" : idx === 1 ? "rank-2" : idx === 2 ? "rank-3" : "";
-                        return (
-                          <div key={member.name} className="card" style={{ padding: "14px 16px", display: "grid", gridTemplateColumns: "36px 1fr auto", alignItems: "center", gap: "16px" }}>
-                            <div style={{ fontFamily: "'Cinzel',serif", fontSize: "20px", fontWeight: 700, textAlign: "center" }} className={rankCls}>
-                              {idx === 0 ? "👑" : idx === 1 ? "⚔️" : idx === 2 ? "🏹" : `${idx + 1}`}
+                        return html`
+                          <div key=${member.name} className="card" style=${{ padding: "14px 16px", display: "grid", gridTemplateColumns: "36px 1fr auto", alignItems: "center", gap: "16px" }}>
+                            <div style=${{ fontFamily: "'Cinzel',serif", fontSize: "20px", fontWeight: 700, textAlign: "center" }} className=${rankCls}>
+                              ${idx === 0 ? "👑" : idx === 1 ? "⚔️" : idx === 2 ? "🏹" : `${idx + 1}`}
                             </div>
                             <div>
-                              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px", flexWrap: "wrap" }}>
-                                {cls && <span style={{ fontSize: "16px" }}>{cls.icon}</span>}
-                                <span style={{ fontFamily: "'Cinzel',serif", fontSize: "14px", color: "#F1F5F9" }}>{member.name}</span>
-                                <span style={{ fontFamily: "'Crimson Text',serif", fontSize: "12px", color: "#465E75" }}>{member.role}</span>
-                                {cls && <span style={{ fontFamily: "'Cinzel',serif", fontSize: "10px", padding: "1px 8px", border: `1px solid ${cls.color}40`, color: cls.color, borderRadius: "2px" }}>{cls.name}</span>}
+                              <div style=${{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px", flexWrap: "wrap" }}>
+                                ${cls && html`<span style=${{ fontSize: "16px" }}>${cls.icon}</span>`}
+                                <span style=${{ fontFamily: "'Cinzel',serif", fontSize: "14px", color: "#F1F5F9" }}>${member.name}</span>
+                                <span style=${{ fontFamily: "'Crimson Text',serif", fontSize: "12px", color: "#465E75" }}>${member.role}</span>
+                                ${cls && html`<span style=${{ fontFamily: "'Cinzel',serif", fontSize: "10px", padding: "1px 8px", border: `1px solid ${cls.color}40`, color: cls.color, borderRadius: "2px" }}>${cls.name}</span>`}
                               </div>
-                              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                                <span style={{ fontFamily: "'Cinzel',serif", fontSize: "11px", color: "#58C7EB", whiteSpace: "nowrap" }}>Lv.{current.level} {current.title}</span>
-                                <div className="xp-bar-bg" style={{ flex: 1 }}>
-                                  <div className="xp-bar-fill" style={{ width: `${progress}%` }} />
+                              <div style=${{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                <span style=${{ fontFamily: "'Cinzel',serif", fontSize: "11px", color: "#58C7EB", whiteSpace: "nowrap" }}>Lv.${current.level} ${current.title}</span>
+                                <div className="xp-bar-bg" style=${{ flex: 1 }}>
+                                  <div className="xp-bar-fill" style=${{ width: `${progress}%` }} />
                                 </div>
-                                <span style={{ fontFamily: "'Crimson Text',serif", fontSize: "12px", color: "#7A93A6", whiteSpace: "nowrap" }}>
-                                  {next ? `${data.xp} / ${next.xp} XP` : `${data.xp} XP — MAX`}
+                                <span style=${{ fontFamily: "'Crimson Text',serif", fontSize: "12px", color: "#7A93A6", whiteSpace: "nowrap" }}>
+                                  ${next ? `${data.xp} / ${next.xp} XP` : `${data.xp} XP — MAX`}
                                 </span>
                               </div>
-                              {data.achievements?.length > 0 && (
-                                <div style={{ marginTop: "5px", display: "flex", gap: "4px", flexWrap: "wrap" }}>
-                                  {data.achievements.map(achId => {
+                              ${data.achievements?.length > 0 && html`
+                                <div style=${{ marginTop: "5px", display: "flex", gap: "4px", flexWrap: "wrap" }}>
+                                  ${data.achievements.map(achId => {
                                     const ach = ACHIEVEMENTS.find(a => a.id === achId);
-                                    return ach ? <span key={achId} title={ach.name} style={{ fontSize: "14px" }}>{ach.icon}</span> : null;
+                                    return ach ? html`<span key=${achId} title=${ach.name} style=${{ fontSize: "14px" }}>${ach.icon}</span>` : null;
                                   })}
                                 </div>
-                              )}
+                              `}
                             </div>
 
-                            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px" }}>
-                              <div style={{ fontFamily: "'Cinzel',serif", fontSize: "18px", color: "#58C7EB", fontWeight: 700 }}>
-                                {data.xp} <span style={{ fontSize: "11px", color: "#465E75" }}>XP</span>
+                            <div style=${{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px" }}>
+                              <div style=${{ fontFamily: "'Cinzel',serif", fontSize: "18px", color: "#58C7EB", fontWeight: 700 }}>
+                                ${data.xp} <span style=${{ fontSize: "11px", color: "#465E75" }}>XP</span>
                               </div>
 
-                              {isAdmin && (
-                                editingXP === member.name ? (
-                                  <div style={{ display: "flex", gap: "6px" }}>
-                                    <input className="edit-input" value={xpInput} onChange={e => setXpInput(e.target.value)} onKeyDown={e => e.key === "Enter" && updateXP(member.name, xpInput)} autoFocus placeholder="XP" />
-                                    <button className="btn btn-primary" onClick={() => updateXP(member.name, xpInput)}>Set</button>
-                                    <button className="btn" onClick={() => setEditingXP(null)}>✕</button>
-                                  </div>
-                                ) : (
-                                  <div style={{ display: "flex", gap: "6px" }}>
-                                    <button className="btn" onClick={() => { setEditingXP(member.name); setXpInput(String(data.xp)); }}>Edit XP</button>
-                                    <button className="btn" onClick={() => { setClassTarget(member.name); setTab("classes"); }}>{cls ? "Change class" : "Pick class"}</button>
-                                  </div>
-                                )
+                              ${isAdmin && (
+                                editingXP === member.name
+                                  ? html`
+                                    <div style=${{ display: "flex", gap: "6px" }}>
+                                      <input className="edit-input" value=${xpInput} onChange=${e => setXpInput(e.target.value)} onKeyDown=${e => e.key === "Enter" && updateXP(member.name, xpInput)} autoFocus placeholder="XP" />
+                                      <button className="btn btn-primary" onClick=${() => updateXP(member.name, xpInput)}>Set</button>
+                                      <button className="btn" onClick=${() => setEditingXP(null)}>✕</button>
+                                    </div>
+                                  `
+                                  : html`
+                                    <div style=${{ display: "flex", gap: "6px" }}>
+                                      <button className="btn" onClick=${() => { setEditingXP(member.name); setXpInput(String(data.xp)); }}>Edit XP</button>
+                                      <button className="btn" onClick=${() => { setClassTarget(member.name); setTab("classes"); }}>${cls ? "Change class" : "Pick class"}</button>
+                                    </div>
+                                  `
                               )}
                             </div>
                           </div>
-                        );
+                        `;
                       })}
                     </div>
 
-                    <div style={{ marginTop: "20px", padding: "12px 16px", background: "#0E1520", border: "1px solid #243345", borderRadius: "4px" }}>
-                      {isAdmin ? (
-                        <>
-                          <div style={{ fontFamily: "'Cinzel',serif", fontSize: "10px", color: "#465E75", letterSpacing: "0.08em", marginBottom: "8px" }}>HOW TO UPDATE XP</div>
-                          <div style={{ fontFamily: "'Crimson Text',serif", fontSize: "13px", color: "#7A93A6", lineHeight: "1.7" }}>
+                    <div style=${{ marginTop: "20px", padding: "12px 16px", background: "#0E1520", border: "1px solid #243345", borderRadius: "4px" }}>
+                      ${isAdmin
+                        ? html`<${React.Fragment}>
+                          <div style=${{ fontFamily: "'Cinzel',serif", fontSize: "10px", color: "#465E75", letterSpacing: "0.08em", marginBottom: "8px" }}>HOW TO UPDATE XP</div>
+                          <div style=${{ fontFamily: "'Crimson Text',serif", fontSize: "13px", color: "#7A93A6", lineHeight: "1.7" }}>
                             Click <span className="gold">Edit XP</span> next to a crew member to set their total after each sprint. Calculate using the XP System tab. Update every Friday after the retrospective. Data is saved to the cloud automatically.
                           </div>
-                        </>
-                      ) : (
-                        <>
-                          <div style={{ fontFamily: "'Cinzel',serif", fontSize: "10px", color: "#465E75", letterSpacing: "0.08em", marginBottom: "8px" }}>CHRONICLES</div>
-                          <div style={{ fontFamily: "'Crimson Text',serif", fontSize: "13px", color: "#7A93A6", lineHeight: "1.7" }}>
+                        <//>`
+                        : html`<${React.Fragment}>
+                          <div style=${{ fontFamily: "'Cinzel',serif", fontSize: "10px", color: "#465E75", letterSpacing: "0.08em", marginBottom: "8px" }}>CHRONICLES</div>
+                          <div style=${{ fontFamily: "'Crimson Text',serif", fontSize: "13px", color: "#7A93A6", lineHeight: "1.7" }}>
                             Standings are updated every Friday after the sprint retrospective. Check back then to see who advanced.
                           </div>
-                        </>
-                      )}
+                        <//>`
+                      }
                     </div>
                   </div>
-                )}
+                `}
 
-                {/* CLASSES */}
-                {tab === "classes" && (
+                ${/* CLASSES */ null}
+                ${tab === "classes" && html`
                   <div>
-                    <div style={{ fontFamily: "'Cinzel',serif", fontSize: "13px", color: "#7A93A6", letterSpacing: "0.1em", marginBottom: "8px" }}>✦ CHOOSE YOUR CLASS ✦</div>
-                    {isAdmin && classTarget && <div style={{ fontFamily: "'Crimson Text',serif", fontSize: "14px", color: "#58C7EB", marginBottom: "16px" }}>Assigning class for: <strong>{classTarget}</strong> — select below then confirm.</div>}
-                    {!classTarget && <div style={{ fontFamily: "'Crimson Text',serif", fontSize: "14px", color: "#7A93A6", marginBottom: "16px" }}>Browse all classes. {isAdmin ? <>To assign, go to the Leaderboard and click "Pick class" on a crew member.</> : <>Classes are assigned by the Game Producer. [XP Multiplier Feature not available]</>}</div>}
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(220px,1fr))", gap: "10px" }}>
-                      {CLASSES.map(cls => (
-                        <div key={cls.id}
-                          className={`class-card ${selectedClass === cls.id ? "selected" : ""}`}
-                          style={{ borderColor: selectedClass === cls.id ? cls.color : undefined, cursor: isAdmin ? "pointer" : "default" }}
-                          onClick={() => isAdmin && setSelectedClass(cls.id)}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
-                            <span style={{ fontSize: "24px" }}>{cls.icon}</span>
+                    <div style=${{ fontFamily: "'Cinzel',serif", fontSize: "13px", color: "#7A93A6", letterSpacing: "0.1em", marginBottom: "8px" }}>✦ CHOOSE YOUR CLASS ✦</div>
+                    ${isAdmin && classTarget && html`<div style=${{ fontFamily: "'Crimson Text',serif", fontSize: "14px", color: "#58C7EB", marginBottom: "16px" }}>Assigning class for: <strong>${classTarget}</strong> — select below then confirm.</div>`}
+                    ${!classTarget && html`<div style=${{ fontFamily: "'Crimson Text',serif", fontSize: "14px", color: "#7A93A6", marginBottom: "16px" }}>Browse all classes. ${isAdmin ? `To assign, go to the Leaderboard and click "Pick class" on a crew member.` : `Classes are assigned by the Game Producer. [XP Multiplier Feature not available]`}</div>`}
+                    <div style=${{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(220px,1fr))", gap: "10px" }}>
+                      ${CLASSES.map(cls => html`
+                        <div key=${cls.id}
+                          className=${`class-card ${selectedClass === cls.id ? "selected" : ""}`}
+                          style=${{ borderColor: selectedClass === cls.id ? cls.color : undefined, cursor: isAdmin ? "pointer" : "default" }}
+                          onClick=${() => isAdmin && setSelectedClass(cls.id)}>
+                          <div style=${{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+                            <span style=${{ fontSize: "24px" }}>${cls.icon}</span>
                             <div>
-                              <div style={{ fontFamily: "'Cinzel',serif", fontSize: "13px", color: cls.color }}>{cls.name}</div>
-                              <div style={{ fontFamily: "'Cinzel',serif", fontSize: "9px", color: "#465E75", letterSpacing: "0.05em" }}>{cls.trait.toUpperCase()}</div>
+                              <div style=${{ fontFamily: "'Cinzel',serif", fontSize: "13px", color: cls.color }}>${cls.name}</div>
+                              <div style=${{ fontFamily: "'Cinzel',serif", fontSize: "9px", color: "#465E75", letterSpacing: "0.05em" }}>${cls.trait.toUpperCase()}</div>
                             </div>
                           </div>
-                          <div style={{ fontFamily: "'Crimson Text',serif", fontSize: "13px", color: "#7A93A6", lineHeight: "1.5", marginBottom: "8px" }}>{cls.desc}</div>
-                          <div style={{ fontFamily: "'Crimson Text',serif", fontSize: "12px", color: "#58C7EB", padding: "4px 8px", background: "#142132", borderRadius: "2px" }}>{cls.bonus}</div>
-                          {isAdmin && classTarget && selectedClass === cls.id && (
-                            <button className="btn btn-primary" style={{ marginTop: "10px", width: "100%" }} onClick={() => assignClass(classTarget, cls.id)}>
-                              Assign to {classTarget}
+                          <div style=${{ fontFamily: "'Crimson Text',serif", fontSize: "13px", color: "#7A93A6", lineHeight: "1.5", marginBottom: "8px" }}>${cls.desc}</div>
+                          <div style=${{ fontFamily: "'Crimson Text',serif", fontSize: "12px", color: "#58C7EB", padding: "4px 8px", background: "#142132", borderRadius: "2px" }}>${cls.bonus}</div>
+                          ${isAdmin && classTarget && selectedClass === cls.id && html`
+                            <button className="btn btn-primary" style=${{ marginTop: "10px", width: "100%" }} onClick=${() => assignClass(classTarget, cls.id)}>
+                              Assign to ${classTarget}
                             </button>
-                          )}
+                          `}
                         </div>
-                      ))}
+                      `)}
                     </div>
                   </div>
-                )}
+                `}
 
-                {/* XP SYSTEM */}
-                {tab === "xp" && (
+                ${/* XP SYSTEM */ null}
+                ${tab === "xp" && html`
                   <div>
-                    <div style={{ fontFamily: "'Cinzel',serif", fontSize: "13px", color: "#7A93A6", letterSpacing: "0.1em", marginBottom: "20px" }}>✦ XP & ADVANCEMENT ✦</div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+                    <div style=${{ fontFamily: "'Cinzel',serif", fontSize: "13px", color: "#7A93A6", letterSpacing: "0.1em", marginBottom: "20px" }}>✦ XP & ADVANCEMENT ✦</div>
+                    <div style=${{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
                       <div>
-                        <div style={{ fontFamily: "'Cinzel',serif", fontSize: "11px", color: "#465E75", letterSpacing: "0.08em", marginBottom: "10px" }}>TICKET SIZE → BASE XP</div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                          {XP_TABLE.map(row => (
-                            <div key={row.size} className="card" style={{ padding: "10px 14px", display: "grid", gridTemplateColumns: "40px 80px 60px 1fr", alignItems: "center", gap: "10px" }}>
-                              <div style={{ fontFamily: "'Cinzel',serif", fontSize: "14px", color: "#58C7EB", fontWeight: 700 }}>{row.size}</div>
-                              <div style={{ fontFamily: "'Cinzel',serif", fontSize: "11px", color: "#F1F5F9" }}>{row.label}</div>
-                              <div style={{ fontFamily: "'Cinzel',serif", fontSize: "15px", color: "#58C7EB" }}>{row.xp} <span style={{ fontSize: "9px", color: "#465E75" }}>XP</span></div>
-                              <div style={{ fontFamily: "'Crimson Text',serif", fontSize: "12px", color: "#465E75" }}>{row.desc}</div>
+                        <div style=${{ fontFamily: "'Cinzel',serif", fontSize: "11px", color: "#465E75", letterSpacing: "0.08em", marginBottom: "10px" }}>TICKET SIZE → BASE XP</div>
+                        <div style=${{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                          ${XP_TABLE.map(row => html`
+                            <div key=${row.size} className="card" style=${{ padding: "10px 14px", display: "grid", gridTemplateColumns: "40px 80px 60px 1fr", alignItems: "center", gap: "10px" }}>
+                              <div style=${{ fontFamily: "'Cinzel',serif", fontSize: "14px", color: "#58C7EB", fontWeight: 700 }}>${row.size}</div>
+                              <div style=${{ fontFamily: "'Cinzel',serif", fontSize: "11px", color: "#F1F5F9" }}>${row.label}</div>
+                              <div style=${{ fontFamily: "'Cinzel',serif", fontSize: "15px", color: "#58C7EB" }}>${row.xp} <span style=${{ fontSize: "9px", color: "#465E75" }}>XP</span></div>
+                              <div style=${{ fontFamily: "'Crimson Text',serif", fontSize: "12px", color: "#465E75" }}>${row.desc}</div>
                             </div>
-                          ))}
+                          `)}
                         </div>
-                        <div style={{ marginTop: "16px" }}>
-                          <div style={{ fontFamily: "'Cinzel',serif", fontSize: "11px", color: "#465E75", letterSpacing: "0.08em", marginBottom: "10px" }}>XP MULTIPLIERS & BONUSES - [Feature not available]</div>
-                          <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-                            {MULTIPLIERS.map((m, i) => (
-                              <div key={i} className="card" style={{ padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                <span style={{ fontFamily: "'Crimson Text',serif", fontSize: "13px", color: "#7A93A6" }}>{m.label}</span>
-                                <span style={{ fontFamily: "'Cinzel',serif", fontSize: "12px", color: m.color, fontWeight: 600 }}>{m.mult}</span>
+                        <div style=${{ marginTop: "16px" }}>
+                          <div style=${{ fontFamily: "'Cinzel',serif", fontSize: "11px", color: "#465E75", letterSpacing: "0.08em", marginBottom: "10px" }}>XP MULTIPLIERS & BONUSES - [Feature not available]</div>
+                          <div style=${{ display: "flex", flexDirection: "column", gap: "5px" }}>
+                            ${MULTIPLIERS.map((m, i) => html`
+                              <div key=${i} className="card" style=${{ padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <span style=${{ fontFamily: "'Crimson Text',serif", fontSize: "13px", color: "#7A93A6" }}>${m.label}</span>
+                                <span style=${{ fontFamily: "'Cinzel',serif", fontSize: "12px", color: m.color, fontWeight: 600 }}>${m.mult}</span>
                               </div>
-                            ))}
+                            `)}
                           </div>
                         </div>
                       </div>
                       <div>
-                        <div style={{ fontFamily: "'Cinzel',serif", fontSize: "11px", color: "#465E75", letterSpacing: "0.08em", marginBottom: "10px" }}>LEVEL THRESHOLDS</div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-                          {LEVELS.map((lv, i) => (
-                            <div key={lv.level} className="card" style={{ padding: "8px 14px", display: "grid", gridTemplateColumns: "32px 1fr auto", alignItems: "center", gap: "10px" }}>
-                              <div style={{ fontFamily: "'Cinzel',serif", fontSize: "12px", color: "#465E75" }}>Lv.{lv.level}</div>
-                              <div style={{ fontFamily: "'Cinzel',serif", fontSize: "12px", color: i === 9 ? "#58C7EB" : "#F1F5F9" }}>{lv.title}</div>
-                              <div style={{ fontFamily: "'Crimson Text',serif", fontSize: "13px", color: "#58C7EB" }}>{lv.xp === 0 ? "—" : `${lv.xp} XP`}</div>
+                        <div style=${{ fontFamily: "'Cinzel',serif", fontSize: "11px", color: "#465E75", letterSpacing: "0.08em", marginBottom: "10px" }}>LEVEL THRESHOLDS</div>
+                        <div style=${{ display: "flex", flexDirection: "column", gap: "5px" }}>
+                          ${LEVELS.map((lv, i) => html`
+                            <div key=${lv.level} className="card" style=${{ padding: "8px 14px", display: "grid", gridTemplateColumns: "32px 1fr auto", alignItems: "center", gap: "10px" }}>
+                              <div style=${{ fontFamily: "'Cinzel',serif", fontSize: "12px", color: "#465E75" }}>Lv.${lv.level}</div>
+                              <div style=${{ fontFamily: "'Cinzel',serif", fontSize: "12px", color: i === 9 ? "#58C7EB" : "#F1F5F9" }}>${lv.title}</div>
+                              <div style=${{ fontFamily: "'Crimson Text',serif", fontSize: "13px", color: "#58C7EB" }}>${lv.xp === 0 ? "—" : `${lv.xp} XP`}</div>
                             </div>
-                          ))}
+                          `)}
                         </div>
-                        <div className="card" style={{ padding: "14px", marginTop: "16px" }}>
-                          <div style={{ fontFamily: "'Cinzel',serif", fontSize: "11px", color: "#465E75", letterSpacing: "0.08em", marginBottom: "8px" }}>EXAMPLE SPRINT CALC</div>
-                          <div style={{ fontFamily: "'Crimson Text',serif", fontSize: "13px", color: "#7A93A6", lineHeight: "1.8" }}>
+                        <div className="card" style=${{ padding: "14px", marginTop: "16px" }}>
+                          <div style=${{ fontFamily: "'Cinzel',serif", fontSize: "11px", color: "#465E75", letterSpacing: "0.08em", marginBottom: "8px" }}>EXAMPLE SPRINT CALC</div>
+                          <div style=${{ fontFamily: "'Crimson Text',serif", fontSize: "13px", color: "#7A93A6", lineHeight: "1.8" }}>
                             3× M tickets = 180 XP<br />
                             1× L Main Quest = 120 × 1.20 = <span className="gold">144 XP</span><br />
                             On-time bonus = 144 × 1.15 = <span className="gold">165 XP</span><br />
                             Standup streak = +10 flat<br />
-                            <hr style={{ borderColor: "#243345", margin: "8px 0" }} />
-                            <span className="gold" style={{ fontFamily: "'Cinzel',serif" }}>Total: ~355 XP</span> in one sprint<br />
-                            <span style={{ fontSize: "11px", color: "#465E75" }}>That's Lv.2 → Lv.3 in one strong sprint.</span>
+                            <hr style=${{ borderColor: "#243345", margin: "8px 0" }} />
+                            <span className="gold" style=${{ fontFamily: "'Cinzel',serif" }}>Total: ~355 XP</span> in one sprint<br />
+                            <span style=${{ fontSize: "11px", color: "#465E75" }}>That's Lv.2 → Lv.3 in one strong sprint.</span>
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                )}
+                `}
 
-                {/* QUEST TYPES */}
-                {tab === "quests" && (
+                ${/* QUEST TYPES */ null}
+                ${tab === "quests" && html`
                   <div>
-                    <div style={{ fontFamily: "'Cinzel',serif", fontSize: "13px", color: "#7A93A6", letterSpacing: "0.1em", marginBottom: "20px" }}>✦ QUEST TYPES & JIRA LABELS ✦</div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: "12px" }}>
-                      {QUEST_TYPES.map(q => (
-                        <div key={q.type} className="quest-card" style={{ borderLeft: `3px solid ${q.color}` }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
-                            <span style={{ fontSize: "22px" }}>{q.icon}</span>
-                            <span style={{ fontFamily: "'Cinzel',serif", fontSize: "14px", color: q.color }}>{q.type}</span>
+                    <div style=${{ fontFamily: "'Cinzel',serif", fontSize: "13px", color: "#7A93A6", letterSpacing: "0.1em", marginBottom: "20px" }}>✦ QUEST TYPES & JIRA LABELS ✦</div>
+                    <div style=${{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: "12px" }}>
+                      ${QUEST_TYPES.map(q => html`
+                        <div key=${q.type} className="quest-card" style=${{ borderLeft: `3px solid ${q.color}` }}>
+                          <div style=${{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
+                            <span style=${{ fontSize: "22px" }}>${q.icon}</span>
+                            <span style=${{ fontFamily: "'Cinzel',serif", fontSize: "14px", color: q.color }}>${q.type}</span>
                           </div>
-                          <div style={{ fontFamily: "'Crimson Text',serif", fontSize: "13px", color: "#7A93A6", lineHeight: "1.6", marginBottom: "10px" }}>{q.desc}</div>
-                          <div style={{ background: "#142132", border: "1px solid #243345", borderRadius: "2px", padding: "6px 10px", marginBottom: "10px" }}>
-                            <div style={{ fontFamily: "'Cinzel',serif", fontSize: "9px", color: "#465E75", letterSpacing: "0.06em", marginBottom: "3px" }}>JIRA CONFIG</div>
-                            <div style={{ fontFamily: "'Crimson Text',serif", fontSize: "12px", color: "#58C7EB" }}>{q.jira}</div>
+                          <div style=${{ fontFamily: "'Crimson Text',serif", fontSize: "13px", color: "#7A93A6", lineHeight: "1.6", marginBottom: "10px" }}>${q.desc}</div>
+                          <div style=${{ background: "#142132", border: "1px solid #243345", borderRadius: "2px", padding: "6px 10px", marginBottom: "10px" }}>
+                            <div style=${{ fontFamily: "'Cinzel',serif", fontSize: "9px", color: "#465E75", letterSpacing: "0.06em", marginBottom: "3px" }}>JIRA CONFIG</div>
+                            <div style=${{ fontFamily: "'Crimson Text',serif", fontSize: "12px", color: "#58C7EB" }}>${q.jira}</div>
                           </div>
-                          <div style={{ fontFamily: "'Cinzel',serif", fontSize: "9px", color: "#465E75", letterSpacing: "0.06em", marginBottom: "5px" }}>EXAMPLES</div>
-                          {q.examples.map((ex, i) => (
-                            <div key={i} style={{ fontFamily: "'Crimson Text',serif", fontSize: "12px", color: "#465E75", padding: "2px 0", borderBottom: "1px solid #1B2635" }}>· {ex}</div>
-                          ))}
+                          <div style=${{ fontFamily: "'Cinzel',serif", fontSize: "9px", color: "#465E75", letterSpacing: "0.06em", marginBottom: "5px" }}>EXAMPLES</div>
+                          ${q.examples.map((ex, i) => html`
+                            <div key=${i} style=${{ fontFamily: "'Crimson Text',serif", fontSize: "12px", color: "#465E75", padding: "2px 0", borderBottom: "1px solid #1B2635" }}>· ${ex}</div>
+                          `)}
                         </div>
-                      ))}
+                      `)}
                     </div>
                   </div>
-                )}
+                `}
 
-                {/* ACHIEVEMENTS */}
-                {tab === "achievements" && (
+                ${/* ACHIEVEMENTS */ null}
+                ${tab === "achievements" && html`
                   <div>
-                    <div style={{ fontFamily: "'Cinzel',serif", fontSize: "13px", color: "#7A93A6", letterSpacing: "0.1em", marginBottom: "8px" }}>✦ DEEDS & HONOURS ✦</div>
-                    <div style={{ fontFamily: "'Crimson Text',serif", fontSize: "13px", color: "#465E75", marginBottom: "16px" }}>
-                      {isAdmin
+                    <div style=${{ fontFamily: "'Cinzel',serif", fontSize: "13px", color: "#7A93A6", letterSpacing: "0.1em", marginBottom: "8px" }}>✦ DEEDS & HONOURS ✦</div>
+                    <div style=${{ fontFamily: "'Crimson Text',serif", fontSize: "13px", color: "#465E75", marginBottom: "16px" }}>
+                      ${isAdmin
                         ? "Click an achievement to mark it as earned. XP is added automatically."
                         : "Achievements earned by each crew member during the campaign."}
                     </div>
-                    {sorted.map(member => {
+                    ${sorted.map(member => {
                       const data   = memberData[member.name] || { xp: 0, classId: null, achievements: [] };
                       const earned = data.achievements || [];
-                      return (
-                        <div key={member.name} style={{ marginBottom: "20px" }}>
-                          <div style={{ fontFamily: "'Cinzel',serif", fontSize: "12px", color: "#58C7EB", letterSpacing: "0.06em", marginBottom: "8px", display: "flex", alignItems: "center", gap: "10px" }}>
-                            {member.name}
-                            <span style={{ fontSize: "10px", color: "#465E75" }}>{earned.length}/{ACHIEVEMENTS.length} unlocked</span>
+                      return html`
+                        <div key=${member.name} style=${{ marginBottom: "20px" }}>
+                          <div style=${{ fontFamily: "'Cinzel',serif", fontSize: "12px", color: "#58C7EB", letterSpacing: "0.06em", marginBottom: "8px", display: "flex", alignItems: "center", gap: "10px" }}>
+                            ${member.name}
+                            <span style=${{ fontSize: "10px", color: "#465E75" }}>${earned.length}/${ACHIEVEMENTS.length} unlocked</span>
                           </div>
-                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(220px,1fr))", gap: "6px" }}>
-                            {ACHIEVEMENTS.map(ach => {
+                          <div style=${{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(220px,1fr))", gap: "6px" }}>
+                            ${ACHIEVEMENTS.map(ach => {
                               const isEarned = earned.includes(ach.id);
-                              return (
-                                <div key={ach.id}
-                                  className={`ach-card ${isEarned ? "unlocked" : ""} ${isAdmin ? "clickable" : ""}`}
-                                  onClick={() => isAdmin && toggleAchievement(member.name, ach.id)}
-                                  style={{ opacity: isEarned ? 1 : 0.4 }}>
-                                  <span style={{ fontSize: "20px", flexShrink: 0 }}>{ach.icon}</span>
-                                  <div style={{ flex: 1 }}>
-                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "2px" }}>
-                                      <span style={{ fontFamily: "'Cinzel',serif", fontSize: "11px", color: isEarned ? "#58C7EB" : "#7A93A6" }}>{ach.name}</span>
-                                      <span style={{ fontFamily: "'Cinzel',serif", fontSize: "10px", color: rarityColor[ach.rarity], textTransform: "uppercase" }}>{ach.rarity}</span>
+                              return html`
+                                <div key=${ach.id}
+                                  className=${`ach-card ${isEarned ? "unlocked" : ""} ${isAdmin ? "clickable" : ""}`}
+                                  onClick=${() => isAdmin && toggleAchievement(member.name, ach.id)}
+                                  style=${{ opacity: isEarned ? 1 : 0.4 }}>
+                                  <span style=${{ fontSize: "20px", flexShrink: 0 }}>${ach.icon}</span>
+                                  <div style=${{ flex: 1 }}>
+                                    <div style=${{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "2px" }}>
+                                      <span style=${{ fontFamily: "'Cinzel',serif", fontSize: "11px", color: isEarned ? "#58C7EB" : "#7A93A6" }}>${ach.name}</span>
+                                      <span style=${{ fontFamily: "'Cinzel',serif", fontSize: "10px", color: rarityColor[ach.rarity], textTransform: "uppercase" }}>${ach.rarity}</span>
                                     </div>
-                                    <div style={{ fontFamily: "'Crimson Text',serif", fontSize: "11px", color: "#465E75", lineHeight: "1.3" }}>{ach.desc}</div>
-                                    {ach.xp > 0 && <div style={{ fontFamily: "'Cinzel',serif", fontSize: "10px", color: "#58C7EB", marginTop: "3px" }}>+{ach.xp} XP</div>}
+                                    <div style=${{ fontFamily: "'Crimson Text',serif", fontSize: "11px", color: "#465E75", lineHeight: "1.3" }}>${ach.desc}</div>
+                                    ${ach.xp > 0 && html`<div style=${{ fontFamily: "'Cinzel',serif", fontSize: "10px", color: "#58C7EB", marginTop: "3px" }}>+${ach.xp} XP</div>`}
                                   </div>
                                 </div>
-                              );
+                              `;
                             })}
                           </div>
                         </div>
-                      );
+                      `;
                     })}
                   </div>
-                )}
-              </>
-            )}
+                `}
+
+              <//>`
+            }
           </div>
         </div>
-      );
+      `;
     }
 
     // ── MOUNT ────────────────────────────────────────────────────────
     const root = ReactDOM.createRoot(document.getElementById("root"));
-    root.render(<LastCarRPG />);
+    root.render(html`<${LastCarRPG} />`);
   </script>
 </body>
 </html>
